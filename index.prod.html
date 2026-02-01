@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SlideViewer</title>
+    <!-- CSS Modules -->
+    <!-- CSS Bundle -->
+    <link rel="stylesheet" href="dist/pptx-reader.bundle.css">
+    <script>
+        // Detect theme preference before page renders to prevent flash
+        (function() {
+            const stored = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = stored || (prefersDark ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-logo">
+                <span class="logo-icon">▶</span>
+                <span class="logo-text">SlideViewer</span>
+            </div>
+            <div class="header-actions">
+                <span id="file-name" class="file-name"></span>
+                <button id="header-open-btn" class="header-icon-btn" title="Open a PPTX file">📂 Open</button>
+                <button id="theme-toggle" class="theme-toggle" title="Toggle dark/light mode">
+                    <span class="theme-icon-dark">🌙</span>
+                    <span class="theme-icon-light">☀️</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Welcome Screen -->
+            <div id="welcome-screen" class="welcome-screen">
+                <div class="welcome-container">
+                    <h1 class="welcome-title">Open Presentation</h1>
+                    <p class="welcome-subtitle">Securely view your presentations directly in the browser.</p>
+                    
+                    <div class="upload-zone">
+                        <div class="upload-zone-inner">
+                            <div class="upload-icon">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="17 8 12 3 7 8"/>
+                                    <line x1="12" y1="3" x2="12" y2="15"/>
+                                </svg>
+                            </div>
+                            <p class="upload-text">Drag & drop your PPTX file here</p>
+                            <p class="upload-formats">Supports .pptx files</p>
+                            <div class="upload-buttons">
+                                <label for="pptx-input" class="btn-primary">
+                                    <span>📁</span> Browse Device
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="file" id="pptx-input" accept=".pptx" hidden>
+                </div>
+                
+                <footer class="welcome-footer">
+                </footer>
+            </div>
+
+            <!-- Viewer Container -->
+            <div id="viewer-container" class="viewer-container hidden">
+                <div class="viewer-body">
+                    <!-- Slide Thumbnails Sidebar -->
+                    <aside class="sidebar">
+                        <div id="thumbnail-list" class="thumbnail-list">
+                            <!-- Thumbnails will be inserted here -->
+                        </div>
+                    </aside>
+
+                    <!-- Main Slide View -->
+                    <div class="slide-view-container">
+                        <div id="slide-content" class="slide-content">
+                            <!-- Current slide will be displayed here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Navigation Bar -->
+                <footer class="viewer-footer">
+                    <div class="footer-left">
+                        <span id="slide-counter" class="slide-counter">Slide 1 of 1</span>
+                    </div>
+                    <div class="footer-center">
+                        <button id="first-btn" class="nav-icon-btn" title="First slide" disabled>⏮</button>
+                        <button id="prev-btn" class="nav-icon-btn" title="Previous slide" disabled>◀</button>
+                        <input type="number" id="slide-number-input" class="slide-number-input" value="1" min="1">
+                        <button id="next-btn" class="nav-icon-btn" title="Next slide" disabled>▶</button>
+                        <button id="last-btn" class="nav-icon-btn" title="Last slide" disabled>⏭</button>
+                    </div>
+                    <div class="footer-right">
+                        <button id="zoom-out-btn" class="zoom-btn" title="Zoom out">−</button>
+                        <span id="zoom-level" class="zoom-level">Fit</span>
+                        <button id="zoom-in-btn" class="zoom-btn" title="Zoom in">+</button>
+                    </div>
+                </footer>
+            </div>
+        </main>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="loading-overlay hidden">
+            <div class="loading-spinner"></div>
+            <p>Loading presentation...</p>
+        </div>
+    </div>
+
+    <!-- Keyboard Navigation Hint -->
+    <div class="keyboard-nav-hint">
+        Use ← → arrow keys to navigate
+    </div>
+
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
+    <!-- JS Bundle -->
+    <script src="dist/pptx-reader.bundle.js"></script>
+</body>
+</html>

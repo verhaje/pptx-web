@@ -1,0 +1,93 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - "release/**"
+  workflow_dispatch: {}
+
+env:
+  NODE_VERSION: 18
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Derive version
+        id: version
+        run: |
+          BRANCH="${GITHUB_REF_NAME}"
+          if [[ "$BRANCH" == release/* ]]; then
+            VERSION="${BRANCH#release/}"
+          else
+            VERSION="$BRANCH"
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "artifact=pptx-reader-$VERSION.zip" >> $GITHUB_OUTPUT
+
+      - name: Package artifacts
+        run: |
+          mkdir -p release
+          zip -r "release/${{ steps.version.outputs.artifact }}" dist index.prod.html README.md package.json
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-bundle
+          path: release/${{ steps.version.outputs.artifact }}
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+    if: ${{ startsWith(github.ref_name, 'release/') }}
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-bundle
+          path: release
+
+      - name: Derive version
+        id: version
+        run: |
+          BRANCH="${GITHUB_REF_NAME}"
+          VERSION="${BRANCH#release/}"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "artifact=pptx-reader-$VERSION.zip" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.VERSION }}
+          release_name: "Pptx Reader ${{ env.VERSION }}"
+          body: "Automated release from branch ${{ github.ref_name }}"
+          draft: false
+          prerelease: false
+
+      - name: Upload release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: release/${{ steps.version.outputs.artifact }}
+          asset_name: ${{ steps.version.outputs.artifact }}
+          asset_content_type: application/zip

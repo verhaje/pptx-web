@@ -1,0 +1,52 @@
+@media (max-width: 768px) {
+    .header {
+        flex-direction: column;
+        gap: 0.75rem;
+        padding: 0.75rem;
+    }
+    
+    .header-search {
+        min-width: auto;
+        width: 100%;
+    }
+    
+    .header-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .sidebar { width: 140px; }
+
+    .slide-navigation { gap: 1rem; padding: 0.75rem; }
+
+    .nav-btn { padding: 0.4rem 0.75rem; font-size: 0.75rem; }
+
+    .slide-content { padding: 1rem; }
+
+    .slide-display { padding: 1.5rem; }
+
+    .slide-title { font-size: 1.5rem; }
+    
+    .slide-body { font-size: 0.95rem; }
+    
+    .slide-images img {
+        max-width: 80%;
+        max-height: 200px;
+    }
+    
+    .welcome-container { padding: 1rem; }
+    
+    .welcome-title { font-size: 1.5rem; }
+    
+    .upload-zone-inner { padding: 2rem 1rem; }
+    
+    .upload-buttons { flex-direction: column; }
+    
+    .recent-files-grid { grid-template-columns: repeat(2, 1fr); }
+    
+    .welcome-footer {
+        flex-direction: column;
+        gap: 0.75rem;
+        text-align: center;
+    }
+}

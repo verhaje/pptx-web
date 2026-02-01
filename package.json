@@ -1,0 +1,27 @@
+{
+  "name": "pptx-reader",
+  "version": "1.0.0",
+  "description": "A lightweight PPTX file viewer for the web",
+  "main": "index.html",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "build:legacy": "node scripts/minify.js",
+    "watch": "node scripts/watch.js",
+    "dev": "npm run watch",
+    "prod": "npm run build",
+    "test": "node tests/emf-to-svg.test.js"
+  },
+  "keywords": [
+    "pptx",
+    "powerpoint",
+    "viewer",
+    "reader"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/core": "^7.28.6",
+    "@babel/preset-env": "^7.28.6",
+    "terser": "^5.26.0"
+  }
+}

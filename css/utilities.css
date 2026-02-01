@@ -1,0 +1,17 @@
+/* Utility */
+.hidden { display: none !important; }
+
+/* Empty/Error States */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+    color: #64748b;
+}
+
+.empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
