@@ -201,19 +201,40 @@ class ShapeRenderer {
         const zIndexStyle = typeof shape.zIndex === 'number' ? `z-index: ${shape.zIndex};` : '';
         const style = `position: absolute; left: ${x}%; top: ${y}%; width: ${width}%; height: ${height}%; overflow: visible; ${zIndexStyle}`;
 
-        // Arrowheads: prefer mapping to connector start/end when available
+        // Convert percentage coordinates to numeric for viewBox-based SVG
+        // This ensures lines, markers and strokes scale proportionally in thumbnails
+        const toNum = (v) => {
+            if (typeof v === 'string') return parseFloat(v) || 0;
+            return Number(v) || 0;
+        };
+        const vx1 = toNum(x1);
+        const vy1 = toNum(y1);
+        const vx2 = toNum(x2);
+        const vy2 = toNum(y2);
+
+        // Use absolute stroke width so line thickness stays consistent across small/large line boxes
+        const strokeWidthPx = strokeWidth;
+
+        // Arrowheads: map OOXML head/tail to SVG marker-start/marker-end
+        // a:headEnd = decoration at the START of the line → marker-start
+        // a:tailEnd = decoration at the END of the line → marker-end
         const uid = Math.random().toString(36).slice(2, 9);
-        // If connector metadata present, attach tail to startCxn and head to endCxn
-        const markerStartId = (shape.startCxn && shape.arrowTail) ? `arrow-start-${uid}` : (shape.arrowTail && !shape.startCxn ? `arrow-start-${uid}` : null);
-        const markerEndId = (shape.endCxn && shape.arrowHead) ? `arrow-end-${uid}` : (shape.arrowHead && !shape.endCxn ? `arrow-end-${uid}` : null);
+        const hasStartArrow = !!shape.arrowHead; // headEnd → start of line
+        const hasEndArrow = !!shape.arrowTail;   // tailEnd → end of line
+
+        const markerStartId = hasStartArrow ? `arrow-start-${uid}` : null;
+        const markerEndId = hasEndArrow ? `arrow-end-${uid}` : null;
+
+        // Marker size in stroke-width units (keeps arrowheads proportional to line thickness)
+        const markerSize = 10;
 
         const markerStart = markerStartId ? `
-            <marker id="${markerStartId}" viewBox="0 0 10 10" refX="2" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <marker id="${markerStartId}" viewBox="0 0 10 10" refX="0" refY="5" markerWidth="${markerSize}" markerHeight="${markerSize}" markerUnits="strokeWidth" orient="auto-start-reverse">
                 <path d="M0 0 L10 5 L0 10 Z" fill="${strokeColor}" />
             </marker>` : '';
 
         const markerEnd = markerEndId ? `
-            <marker id="${markerEndId}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <marker id="${markerEndId}" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="${markerSize}" markerHeight="${markerSize}" markerUnits="strokeWidth" orient="auto">
                 <path d="M0 0 L10 5 L0 10 Z" fill="${strokeColor}" />
             </marker>` : '';
 
@@ -221,10 +242,10 @@ class ShapeRenderer {
         const markerEndAttr = markerEndId ? `marker-end="url(#${markerEndId})"` : '';
         
         return `<div class="slide-shape line-shape" style="${style}">
-            <svg width="100%" height="100%" preserveAspectRatio="none" style="overflow: visible;">
+            <svg viewBox="0 0 100 100" width="100%" height="100%" preserveAspectRatio="none" style="overflow: visible;">
                 <defs>${markerStart}${markerEnd}</defs>
-                <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" 
-                      stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-linecap="round" ${markerStartAttr} ${markerEndAttr}/>
+                    <line x1="${vx1}" y1="${vy1}" x2="${vx2}" y2="${vy2}" 
+                        stroke="${strokeColor}" stroke-width="${strokeWidthPx}px" stroke-linecap="round" vector-effect="non-scaling-stroke" ${markerStartAttr} ${markerEndAttr}/>
             </svg>
         </div>`;
     }
@@ -248,12 +269,26 @@ class ShapeRenderer {
         // Build SVG paths from custom geometry
         let pathsHTML = '';
         for (const path of shape.customGeometry.paths) {
-            const fillColor = shape.fill === 'none' ? 'none' : (typeof shape.fill === 'string' ? shape.fill : '#ffffff');
+            let fillColor = 'none';
+            let fillOpacity = 1;
+            if (shape.fill === 'none') {
+                fillColor = 'none';
+            } else if (typeof shape.fill === 'string') {
+                fillColor = shape.fill;
+            } else if (shape.fill && shape.fill.type === 'solid') {
+                fillColor = shape.fill.color || '#ffffff';
+                if (shape.fill.opacity !== undefined) fillOpacity = shape.fill.opacity;
+            } else if (shape.fill && shape.fill.type === 'gradient') {
+                fillColor = '#ffffff'; // gradient fallback for SVG path
+            } else {
+                fillColor = '#ffffff';
+            }
             const strokeColor = (shape.stroke && shape.stroke !== 'none') ? shape.stroke : 'none';
             const strokeWidth = shape.strokeWidth || 1;
+            const opacityAttr = fillOpacity < 1 ? ` fill-opacity="${fillOpacity}"` : '';
             
             pathsHTML += `<path d="${path.data}" 
-                            fill="${fillColor}" 
+                            fill="${fillColor}"${opacityAttr}
                             stroke="${strokeColor}" 
                             stroke-width="${strokeWidth}"
                             vector-effect="non-scaling-stroke"/>`;
@@ -397,6 +432,10 @@ class ShapeRenderer {
         
         // Reposition footer and slide number placeholders to bottom-right
         if (shape.isPlaceholder && (shape.placeholderType === 'sldNum' || shape.placeholderType === 'ftr' || shape.placeholderType === 'dt')) {
+            // Ensure minimum visible size for slide number/footer/date placeholders
+            // When no explicit size is provided from slide or layout, default to reasonable dims
+            if (width < 2) width = 2.5;  // ~2.5% of slide width
+            if (height < 2) height = 2.8; // ~2.8% of slide height
             // Bottom-right corner (accounting for element dimensions)
             x = 100 - width - 1;  // 1% margin from right edge
             y = 100 - height - 1; // 1% margin from bottom edge
@@ -826,9 +865,32 @@ class ShapeRenderer {
             const markerWidthEm = (indentEm !== null && indentEm < 0) ? Math.max(0.5, -indentEm) : 1.2;
             const safeLvl = Math.max(0, Math.min(9, lvl));
 
+            // Build bullet marker style: color, font-size, font-family
+            // Use explicit bullet properties first, then fall back to first text run
+            const firstRun = paragraph.find(r => r.text && r.text.trim());
+            let markerStyle = `margin-left: ${markerOffsetEm.toFixed(3)}em; width: ${markerWidthEm.toFixed(3)}em;`;
+
+            const bulletColor = (bullet && bullet.color) || (firstRun && firstRun.color) || null;
+            if (bulletColor) markerStyle += ` color: ${bulletColor};`;
+
+            const bulletFont = (bullet && bullet.font) || (firstRun && firstRun.fontFamily) || null;
+            if (bulletFont) markerStyle += ` font-family: ${bulletFont};`;
+
+            // Bullet size: use explicit buSzPct/buSzPts if available, otherwise match first run
+            if (bullet && typeof bullet.sizePct === 'number') {
+                // buSzPct is a percentage of the text font size
+                const firstRunFontSize = (firstRun && firstRun.fontSize) || BASE_FONT_SIZE;
+                const bulletFontSize = firstRunFontSize * (bullet.sizePct / 100);
+                markerStyle += ` font-size: ${(bulletFontSize / BASE_FONT_SIZE).toFixed(3)}em;`;
+            } else if (bullet && typeof bullet.sizePts === 'number') {
+                markerStyle += ` font-size: ${(bullet.sizePts / BASE_FONT_SIZE).toFixed(3)}em;`;
+            } else if (firstRun && firstRun.fontSize) {
+                markerStyle += ` font-size: ${(firstRun.fontSize / BASE_FONT_SIZE).toFixed(3)}em;`;
+            }
+
             return `
                 <div class="pptx-paragraph pptx-bullet pptx-lvl-${safeLvl}" style="padding-left: ${paddingLeftEm.toFixed(3)}em; ${paragraphStyle}">
-                    <span class="pptx-bullet-marker" style="margin-left: ${markerOffsetEm.toFixed(3)}em; width: ${markerWidthEm.toFixed(3)}em;">${this.textFormatter.escapeHtml(marker)}</span>
+                    <span class="pptx-bullet-marker" style="${markerStyle}">${this.textFormatter.escapeHtml(marker)}</span>
                     <span class="pptx-bullet-content" style="text-align: ${paragraphAlign};">${runsHtml}</span>
                 </div>
             `;

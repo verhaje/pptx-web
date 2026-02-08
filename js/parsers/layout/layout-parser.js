@@ -470,6 +470,7 @@ class LayoutParser {
                 if (levelStyle.spaceBeforeEm !== null && levelStyle.spaceBeforeEm !== undefined) defaults.spaceBeforeEm = levelStyle.spaceBeforeEm;
                 if (levelStyle.spaceAfterEm !== null && levelStyle.spaceAfterEm !== undefined) defaults.spaceAfterEm = levelStyle.spaceAfterEm;
                 if (levelStyle.lineHeight !== null && levelStyle.lineHeight !== undefined) defaults.lineHeight = levelStyle.lineHeight;
+                if (levelStyle.bullet) defaults.bullet = levelStyle.bullet;
             }
         }
 
@@ -506,28 +507,38 @@ class LayoutParser {
         const hasH = (typeof shape.cyEMU === 'number' && shape.cyEMU > 0) || (typeof shape.height === 'number' && shape.height > 0);
 
         if ((!hasX || !hasY || !hasW || !hasH) && placeholder) {
-            if (typeof shape.xEMU !== 'number' && typeof placeholder.x === 'number') {
-                shape.x = placeholder.x;
+            // When the layout placeholder also lacks explicit transform,
+            // cascade to the master placeholder for position/size.
+            let positionSource = placeholder;
+            if (!placeholder._hasExplicitTransform) {
+                const masterPh = this._findPlaceholderInSource(shape, masterData);
+                if (masterPh && masterPh._hasExplicitTransform) {
+                    positionSource = masterPh;
+                }
+            }
+
+            if (typeof shape.xEMU !== 'number' && typeof positionSource.x === 'number') {
+                shape.x = positionSource.x;
                 if (typeof ShapeParser !== 'undefined' && ShapeParser.SLIDE_WIDTH_EMU) {
-                    shape.xEMU = Math.round((placeholder.x / 100) * ShapeParser.SLIDE_WIDTH_EMU);
+                    shape.xEMU = Math.round((positionSource.x / 100) * ShapeParser.SLIDE_WIDTH_EMU);
                 }
             }
-            if (typeof shape.yEMU !== 'number' && typeof placeholder.y === 'number') {
-                shape.y = placeholder.y;
+            if (typeof shape.yEMU !== 'number' && typeof positionSource.y === 'number') {
+                shape.y = positionSource.y;
                 if (typeof ShapeParser !== 'undefined' && ShapeParser.SLIDE_HEIGHT_EMU) {
-                    shape.yEMU = Math.round((placeholder.y / 100) * ShapeParser.SLIDE_HEIGHT_EMU);
+                    shape.yEMU = Math.round((positionSource.y / 100) * ShapeParser.SLIDE_HEIGHT_EMU);
                 }
             }
-            if (typeof shape.cxEMU !== 'number' && typeof placeholder.width === 'number') {
-                shape.width = placeholder.width;
+            if (typeof shape.cxEMU !== 'number' && typeof positionSource.width === 'number') {
+                shape.width = positionSource.width;
                 if (typeof ShapeParser !== 'undefined' && ShapeParser.SLIDE_WIDTH_EMU) {
-                    shape.cxEMU = Math.round((placeholder.width / 100) * ShapeParser.SLIDE_WIDTH_EMU);
+                    shape.cxEMU = Math.round((positionSource.width / 100) * ShapeParser.SLIDE_WIDTH_EMU);
                 }
             }
-            if (typeof shape.cyEMU !== 'number' && typeof placeholder.height === 'number') {
-                shape.height = placeholder.height;
+            if (typeof shape.cyEMU !== 'number' && typeof positionSource.height === 'number') {
+                shape.height = positionSource.height;
                 if (typeof ShapeParser !== 'undefined' && ShapeParser.SLIDE_HEIGHT_EMU) {
-                    shape.cyEMU = Math.round((placeholder.height / 100) * ShapeParser.SLIDE_HEIGHT_EMU);
+                    shape.cyEMU = Math.round((positionSource.height / 100) * ShapeParser.SLIDE_HEIGHT_EMU);
                 }
             }
         }
@@ -543,18 +554,26 @@ class LayoutParser {
         }
 
         // Inherit text box properties (anchor, wrap, insets) when slide shape omits them
-        if (!shape.textVAlign && placeholder.textVAlign) {
-            shape.textVAlign = placeholder.textVAlign;
+        // Try layout placeholder first, then cascade to master
+        const textSource = (placeholder.textVAlign || placeholder.textInsetsEMU)
+            ? placeholder
+            : (this._findPlaceholderInSource(shape, masterData) || placeholder);
+
+        if (!shape.textVAlign && textSource.textVAlign) {
+            shape.textVAlign = textSource.textVAlign;
         }
-        if (shape.textWrap === undefined && placeholder.textWrap !== undefined) {
-            shape.textWrap = placeholder.textWrap;
+        if (shape.textWrap === undefined) {
+            const wrapSource = placeholder.textWrap !== undefined ? placeholder : textSource;
+            if (wrapSource.textWrap !== undefined) {
+                shape.textWrap = wrapSource.textWrap;
+            }
         }
-        if (!shape.textInsetsEMU && placeholder.textInsetsEMU) {
+        if (!shape.textInsetsEMU && textSource.textInsetsEMU) {
             shape.textInsetsEMU = {
-                left: placeholder.textInsetsEMU.left,
-                right: placeholder.textInsetsEMU.right,
-                top: placeholder.textInsetsEMU.top,
-                bottom: placeholder.textInsetsEMU.bottom
+                left: textSource.textInsetsEMU.left,
+                right: textSource.textInsetsEMU.right,
+                top: textSource.textInsetsEMU.top,
+                bottom: textSource.textInsetsEMU.bottom
             };
         }
     }
@@ -595,6 +614,38 @@ class LayoutParser {
         };
 
         return matchFromMap(layoutData?.placeholders) || matchFromMap(masterData?.placeholders) || null;
+    }
+
+    /**
+     * Find placeholder definition from a single source (layout or master)
+     * @param {Object} shape - Slide shape
+     * @param {Object} sourceData - Parsed layout or master data
+     * @returns {Object|null} - Matching placeholder or null
+     */
+    _findPlaceholderInSource(shape, sourceData) {
+        if (!sourceData?.placeholders) return null;
+
+        const normalize = (value) => {
+            if (!value) return [];
+            return Array.isArray(value) ? value : [value];
+        };
+
+        const candidates = normalize(sourceData.placeholders.get(shape.placeholderType));
+        if (shape.placeholderIdx) {
+            const byIdx = candidates.find(p => p && p.placeholderIdx && p.placeholderIdx === shape.placeholderIdx);
+            if (byIdx) return byIdx;
+        }
+        if (candidates.length > 0) return candidates[0];
+
+        // Fallback: search all placeholders for matching idx
+        if (shape.placeholderIdx) {
+            for (const value of sourceData.placeholders.values()) {
+                const arr = normalize(value);
+                const hit = arr.find(p => p && p.placeholderIdx && p.placeholderIdx === shape.placeholderIdx);
+                if (hit) return hit;
+            }
+        }
+        return null;
     }
 }
 

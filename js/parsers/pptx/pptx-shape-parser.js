@@ -163,7 +163,26 @@ PPTXParser.prototype.parseConnectionShape = function (cxnSp, slideRels) {
         }
     }
 
-    // Default stroke if none specified
+    // Default stroke if none specified - try p:style/a:lnRef first
+    if (!shape.stroke) {
+        const pStyle = cxnSp.getElementsByTagName('p:style')[0];
+        if (pStyle) {
+            const lnRef = pStyle.getElementsByTagName('a:lnRef')[0];
+            if (lnRef) {
+                const refColor = this.backgroundExtractor.extractColor(lnRef);
+                if (refColor) {
+                    shape.stroke = refColor;
+                } else {
+                    // Try accent color from theme based on lnRef idx
+                    const lnIdx = parseInt(lnRef.getAttribute('idx') || '0', 10);
+                    if (lnIdx > 0 && lnIdx <= 6 && this.themeExtractor) {
+                        const accentColor = this.themeExtractor.getAccentColor(lnIdx);
+                        if (accentColor) shape.stroke = accentColor;
+                    }
+                }
+            }
+        }
+    }
     if (!shape.stroke) {
         shape.stroke = this.themeExtractor ? this.themeExtractor.getDefaultTextColor() : '#000000';
     }

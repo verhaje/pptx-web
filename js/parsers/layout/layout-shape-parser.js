@@ -72,6 +72,7 @@ class LayoutShapeParser {
 
         const xfrm = spPr.getElementsByTagName('a:xfrm')[0];
         if (xfrm) {
+            shape._hasExplicitTransform = true;
             const off = xfrm.getElementsByTagName('a:off')[0];
             const ext = xfrm.getElementsByTagName('a:ext')[0];
             if (off) {
@@ -87,6 +88,8 @@ class LayoutShapeParser {
             if (rot) {
                 shape.rotation = parseInt(rot, 10) / 60000;
             }
+        } else {
+            shape._hasExplicitTransform = false;
         }
 
         // Get shape geometry
@@ -112,10 +115,14 @@ class LayoutShapeParser {
         shape.cornerRadius = this.extractCornerRadius(spPr);
         
         // Get fill (also for placeholders so slide shapes can inherit)
-        const solidFill = spPr.getElementsByTagName('a:solidFill')[0];
-        const gradFill = spPr.getElementsByTagName('a:gradFill')[0];
-        const blipFill = spPr.getElementsByTagName('a:blipFill')[0];
-        const noFill = spPr.getElementsByTagName('a:noFill')[0];
+        // Only check DIRECT children of spPr for fill elements.
+        // Using getElementsByTagName would incorrectly match elements nested
+        // inside a:ln (e.g., <a:ln><a:noFill/></a:ln> is line-no-fill, not shape-no-fill).
+        const directChildren = Array.from(spPr.children || spPr.childNodes).filter(n => n.nodeType === 1);
+        const solidFill = directChildren.find(c => c.tagName === 'a:solidFill') || null;
+        const gradFill = directChildren.find(c => c.tagName === 'a:gradFill') || null;
+        const blipFill = directChildren.find(c => c.tagName === 'a:blipFill') || null;
+        const noFill = directChildren.find(c => c.tagName === 'a:noFill') || null;
         
         if (noFill) {
             shape.fill = 'none';

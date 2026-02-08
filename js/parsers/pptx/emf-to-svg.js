@@ -2,7 +2,7 @@
  * Minimal EMF -> SVG converter with no external dependencies.
  * Supports EMF files that contain a single STRETCHDIBITS record with
  * 24-bit or 32-bit BI_RGB DIB data. For unsupported inputs, returns a
- * lightweight placeholder SVG. This is intentionally small and best-effort.
+ * lightweight placeholder SVG. 
  */
 (function (global) {
     'use strict';

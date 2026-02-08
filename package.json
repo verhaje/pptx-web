@@ -9,7 +9,7 @@
     "watch": "node scripts/watch.js",
     "dev": "npm run watch",
     "prod": "npm run build",
-    "test": "node tests/emf-to-svg.test.js"
+    "test": "node tests/emf-to-svg.test.js && node tests/slide11-fixes.test.js && node tests/generic.test.js"
   },
   "keywords": [
     "pptx",

@@ -423,6 +423,20 @@
     display: block;
 }
 
+/* Scale down line/connector SVG content in thumbnails */
+.thumbnail-slide .slide-shape.line-shape svg line {
+    vector-effect: non-scaling-stroke;
+    stroke-width: 1px !important;
+}
+
+.thumbnail-slide .slide-shape.line-shape svg marker {
+    /* Markers inherit the SVG viewBox scaling in thumbnails */
+}
+
+.thumbnail-slide .slide-shape.line-shape {
+    overflow: hidden;
+}
+
 .slide-shape span { line-height: 1.2; cursor: text; }
 
 /* Text styling within shapes */

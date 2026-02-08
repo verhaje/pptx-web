@@ -99,7 +99,8 @@ class LayoutTextStyleParser {
             indentEm: null,
             spaceBeforeEm: null,
             spaceAfterEm: null,
-            lineHeight: null
+            lineHeight: null,
+            bullet: null
         };
 
         // Get alignment
@@ -139,6 +140,52 @@ class LayoutTextStyleParser {
             const solidFill = defRPr.getElementsByTagName('a:solidFill')[0];
             if (solidFill) {
                 formatting.color = this.backgroundExtractor.extractColor(solidFill);
+            }
+        }
+
+        // Bullet information
+        const buNone = pPr.getElementsByTagName('a:buNone')[0];
+        if (buNone) {
+            formatting.bullet = { type: 'none' };
+        } else {
+            const buAutoNum = pPr.getElementsByTagName('a:buAutoNum')[0];
+            const buChar = pPr.getElementsByTagName('a:buChar')[0];
+            if (buAutoNum) {
+                formatting.bullet = {
+                    type: 'auto',
+                    numType: buAutoNum.getAttribute('type') || null,
+                    startAt: buAutoNum.getAttribute('startAt') ? parseInt(buAutoNum.getAttribute('startAt'), 10) : null
+                };
+            } else if (buChar) {
+                formatting.bullet = {
+                    type: 'char',
+                    char: buChar.getAttribute('char') || '\u2022'
+                };
+            }
+            // Parse bullet font if present
+            const buFont = pPr.getElementsByTagName('a:buFont')[0];
+            if (buFont && formatting.bullet) {
+                formatting.bullet.font = buFont.getAttribute('typeface') || null;
+            }
+            // Parse bullet color if present
+            const buClr = pPr.getElementsByTagName('a:buClr')[0];
+            if (buClr && formatting.bullet) {
+                formatting.bullet.color = this.backgroundExtractor.extractColor(buClr);
+            }
+            // Parse bullet size if present
+            const buSzPct = pPr.getElementsByTagName('a:buSzPct')[0];
+            if (buSzPct && formatting.bullet) {
+                const pctVal = parseInt(buSzPct.getAttribute('val') || '0', 10);
+                if (!Number.isNaN(pctVal) && pctVal > 0) {
+                    formatting.bullet.sizePct = pctVal / 1000; // val is in thousandths of a percent
+                }
+            }
+            const buSzPts = pPr.getElementsByTagName('a:buSzPts')[0];
+            if (buSzPts && formatting.bullet) {
+                const ptsVal = parseInt(buSzPts.getAttribute('val') || '0', 10);
+                if (!Number.isNaN(ptsVal) && ptsVal > 0) {
+                    formatting.bullet.sizePts = ptsVal / 100; // val is in hundredths of a point
+                }
             }
         }
 
@@ -254,7 +301,8 @@ class LayoutTextStyleParser {
             indentEm: null,
             spaceBeforeEm: null,
             spaceAfterEm: null,
-            lineHeight: null
+            lineHeight: null,
+            bullet: null
         };
 
         // Title placeholders use major font
@@ -276,6 +324,7 @@ class LayoutTextStyleParser {
             if (styleFromMaster.spaceBeforeEm !== null && styleFromMaster.spaceBeforeEm !== undefined) defaults.spaceBeforeEm = styleFromMaster.spaceBeforeEm;
             if (styleFromMaster.spaceAfterEm !== null && styleFromMaster.spaceAfterEm !== undefined) defaults.spaceAfterEm = styleFromMaster.spaceAfterEm;
             if (styleFromMaster.lineHeight !== null && styleFromMaster.lineHeight !== undefined) defaults.lineHeight = styleFromMaster.lineHeight;
+            if (styleFromMaster.bullet) defaults.bullet = styleFromMaster.bullet;
         }
 
         return defaults;
@@ -434,7 +483,10 @@ class LayoutTextStyleParser {
             const ph = sp.getElementsByTagName('p:ph')[0];
             const placeholderType = ph?.getAttribute('type') || null;
             const placeholderIdx = ph?.getAttribute('idx') || null;
-            if (!placeholderType) continue;
+            // Skip placeholders with neither type nor idx
+            if (!placeholderType && !placeholderIdx) continue;
+            // Default to 'body' for placeholders without explicit type (e.g. content placeholders with only idx)
+            const resolvedType = placeholderType || 'body';
 
             const txBody = sp.getElementsByTagName('p:txBody')[0];
             const lstStyle = txBody?.getElementsByTagName('a:lstStyle')[0];
@@ -453,8 +505,12 @@ class LayoutTextStyleParser {
                 levels.default = this.parseLevelFormatting(defPPr);
             }
 
-            if (Object.keys(levels).length > 0 && placeholderIdx !== null) {
-                map.set(`${placeholderType}:${placeholderIdx}`, levels);
+            if (Object.keys(levels).length > 0) {
+                if (placeholderIdx !== null) {
+                    map.set(`${resolvedType}:${placeholderIdx}`, levels);
+                } else {
+                    map.set(resolvedType, levels);
+                }
             }
         }
 

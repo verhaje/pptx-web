@@ -13,7 +13,7 @@ jobs:
     name: Build and publish
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       pages: write
       id-token: write
 
@@ -36,22 +36,19 @@ jobs:
         run: |
           rm -rf site
           mkdir -p site
-          # Use the generated production HTML as index
-          if [ -f index.prod.html ]; then
-            cp index.prod.html site/index.html
-          elif [ -f index.html ]; then
-            cp index.html site/index.html
-          fi
-          # Copy dist assets (bundles)
+
           if [ -d dist ]; then
             cp -R dist site/dist
           fi
+          cp index.prod.html site/index.html
+
+      - name: Upload static files as artifact
+        id: upload-pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Upload the prepared site directory so the artifact includes index.html and dist/
+          path: './site'
 
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./site
-          publish_branch: ${{ github.event.inputs.publish_branch }}
-          # Force orphan commit to keep branch clean
-          force_orphan: true
+        id: deployment
+        uses: actions/deploy-pages@v4

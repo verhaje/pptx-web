@@ -1,78 +1,58 @@
-# Pptx Reader — Instantly View PowerPoints in Your Browser
+# PPTX Reader — View PowerPoint in your Browser 🎉
 
-Beautiful. Fast. Private.
+[![GitHub Pages](https://img.shields.io/static/v1?label=pages&message=live&color=brightgreen)](https://verhaje.github.io/pptx-web/) [![Deploy](https://github.com/verhaje/pptx-web/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/verhaje/pptx-web/actions/workflows/deploy-pages.yml)
 
-Pptx Reader is a lightweight, client-side PowerPoint viewer that opens `.pptx` files right in your browser — no uploads, no servers, and no fuss. Drag a file in and enjoy your slides instantly.
+Fast, private, and easy — open .pptx files right in your browser (no uploads, no server required). Drag-and-drop a file and view your slides instantly. ⚡️
 
-Why you'll love it
-- Delightful: Slides render quickly with a clean, responsive UI so your content looks great.
-- Private: Everything runs in your browser — your presentations never leave your machine.
-- Lightweight: Built for speed and simplicity; no heavyweight dependencies.
+Why use PPTX Reader
+- **Private:** Everything runs locally in your browser — your files never leave your machine. 🔒
+- **Lightweight:** No heavy dependencies; built for speed and simplicity. 🚀
+- **Easy:** Drag & drop or open a file and start viewing immediately. 🖱️
 
-Key features
-- Open and render `.pptx` files locally (no server upload required)
-- Smooth slide navigation and responsive viewer
-- Extracts and renders common content: text, shapes, tables, and basic themes/styles
-- Modular parsers and renderers so the viewer is easy to extend
+Highlights
+- Renders text, shapes, tables, and basic themes
+- Smooth slide navigation and responsive layout
+- Modular code (parsers & renderers) — easy to extend
 
-Quick start (3 steps)
+Quick start — Open locally (recommended for end users)
+1. Open the project folder in your browser or start a simple static server.
 
-1. Install build tools (only required for building/minifying):
+Example (Python built-in server):
+```powershell
+python -m http.server 8080
+```
+Then open http://localhost:8080 in your browser and drop a `.pptx` file into the viewer. 👍
 
-```bash
+Developer quickstart
+- Install dev dependencies (only needed if you're building or developing):
+```powershell
 npm install
 ```
-
-2. Run a local server and open the app:
-
-```bash
-# Python
-python -m http.server 8080
-
-# Node
-npx serve .
-```
-
-Open `http://localhost:8080` and drop a `.pptx` file into the viewer.
-
-Tip: For a production-ready bundle use `index.prod.html` which references minified assets.
-
-Build for production
-
-```bash
-npm run build
-# or
-npm run prod
-```
-
-Development (watch mode)
-
-```bash
-npm run watch
-# or
+- Run the dev watcher:
+```powershell
 npm run dev
 ```
+- Build production bundle:
+```powershell
+npm run prod
+```
+The production build generates `index.prod.html` and `dist/` assets.
 
-Project structure
+Usage tips
+- Drag and drop a `.pptx` file onto the page, or use the file picker. 📂
+- If slides look different across browsers, try a different browser or install matching system fonts. 🎨
 
-- `index.html` — development entry (unminified sources)
-- `index.prod.html` — production entry (minified `dist/` assets)
-- `js/` — parsers, renderers, and UI logic
-  - `parsers/` — PPTX/XML parsing utilities
-  - `renderers/` — drawing and layout code
-- `css/` — stylesheets for a polished viewer
-- `scripts/` — build/minify/watch pipeline
+Project layout (short)
+- `index.html` — development entry (unminified)
+- `index.prod.html` — production entry (uses `dist/` assets)
+- `dist/` — generated bundles after `npm run prod`
+- `js/` — parsers, renderers, and UI code
+- `css/` — styling for the viewer
 
-Contributing and feedback
-
-Found a bug or missing a feature you need? Open an issue or send a pull request — contributions are welcome. If you want a new renderer (e.g., advanced charts or animations), let's collaborate.
-
-Notes
-
-- This is a client-side viewer; rendering can vary slightly across browsers based on ZIP/XML parsing and available fonts.
+Got feedback or want to contribute?
+- Open an issue or submit a pull request — contributions are welcome. 🙌
 
 License
+- MIT — see `package.json` for details.
 
-MIT — see `package.json` for details.
-
-Enjoyed Pptx Reader? Share it with a colleague and make someone's day a little simpler.
+Enjoy PPTX Reader! If it helped you, share it with a colleague. 🙂

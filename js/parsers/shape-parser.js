@@ -254,10 +254,14 @@ class ShapeParser {
      * @returns {string|Object|null} - Fill value
      */
     extractFill(spPr, imageRels) {
-        const solidFill = spPr.getElementsByTagName('a:solidFill')[0];
-        const gradFill = spPr.getElementsByTagName('a:gradFill')[0];
-        const blipFill = spPr.getElementsByTagName('a:blipFill')[0];
-        const noFill = spPr.getElementsByTagName('a:noFill')[0];
+        // Only check DIRECT children of spPr for fill elements.
+        // Using getElementsByTagName would incorrectly match elements nested
+        // inside a:ln (e.g., <a:ln><a:noFill/></a:ln> is line-no-fill, not shape-no-fill).
+        const directChildren = Array.from(spPr.children || spPr.childNodes).filter(n => n.nodeType === 1);
+        const solidFill = directChildren.find(c => c.tagName === 'a:solidFill') || null;
+        const gradFill = directChildren.find(c => c.tagName === 'a:gradFill') || null;
+        const blipFill = directChildren.find(c => c.tagName === 'a:blipFill') || null;
+        const noFill = directChildren.find(c => c.tagName === 'a:noFill') || null;
         
         if (noFill) {
             return 'none';
@@ -971,6 +975,10 @@ class ShapeParser {
                 }
                 // Attach paragraph metadata to the first run for renderer consumption
                 paraText[0].lvl = lvl;
+                // Inherit bullet from master/layout defaults when not explicitly set
+                if (!bullet && textDefaults && textDefaults.bullet) {
+                    bullet = textDefaults.bullet;
+                }
                 if (bullet) paraText[0].bullet = bullet;
                 if (typeof marLEm === 'number') paraText[0].marLEm = marLEm;
                 if (typeof indentEm === 'number') paraText[0].indentEm = indentEm;
