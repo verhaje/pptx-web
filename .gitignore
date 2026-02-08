@@ -1,6 +1,7 @@
 # Dependencies
 node_modules/
-package-lock.json
+# Commit `package-lock.json` to ensure consistent installs and CI caching
+# (remove package-lock.json from this file if you previously ignored it)
 yarn.lock
 
 # Build output

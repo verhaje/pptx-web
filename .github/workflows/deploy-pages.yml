@@ -1,0 +1,57 @@
+name: Build and Deploy GitHub Pages
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish_branch:
+        description: 'Branch to publish to (gh-pages)'
+        required: false
+        default: 'gh-pages'
+
+jobs:
+  deploy:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production
+        run: npm run prod
+
+      - name: Prepare site directory
+        run: |
+          rm -rf site
+          mkdir -p site
+          # Use the generated production HTML as index
+          if [ -f index.prod.html ]; then
+            cp index.prod.html site/index.html
+          elif [ -f index.html ]; then
+            cp index.html site/index.html
+          fi
+          # Copy dist assets (bundles)
+          if [ -d dist ]; then
+            cp -R dist site/dist
+          fi
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          publish_branch: ${{ github.event.inputs.publish_branch }}
+          # Force orphan commit to keep branch clean
+          force_orphan: true
