@@ -119,6 +119,21 @@ function ensureDistDir() {
 }
 
 /**
+ * Copy vendor files from node_modules into dist
+ */
+function copyVendorFiles() {
+    const jszipSrc = path.join(ROOT_DIR, 'node_modules', 'jszip', 'dist', 'jszip.min.js');
+    const jszipDest = path.join(DIST_DIR, 'jszip.min.js');
+
+    if (fs.existsSync(jszipSrc)) {
+        fs.copyFileSync(jszipSrc, jszipDest);
+        console.log('  ✓ Copied jszip to dist/jszip.min.js');
+    } else {
+        console.warn('  ⚠ jszip not found in node_modules; skipping vendor copy');
+    }
+}
+
+/**
  * Read and concatenate files
  */
 function concatenateFiles(basePath, files) {
@@ -202,11 +217,25 @@ async function buildJsBundles() {
         
         // Concatenate all files
         const combined = concatenateFiles(JS_SRC_DIR, files);
-        const combinedSize = Buffer.byteLength(combined, 'utf8');
+
+        // Prepend vendor JS (jszip) from node_modules if available so JSZip is part of the bundle
+        const jszipSrc = path.join(ROOT_DIR, 'node_modules', 'jszip', 'dist', 'jszip.min.js');
+        let combinedWithVendors = combined;
+        if (fs.existsSync(jszipSrc)) {
+            try {
+                const jszipContent = fs.readFileSync(jszipSrc, 'utf8');
+                combinedWithVendors = `/* === vendor: jszip.min.js === */\n${jszipContent}\n\n${combined}`;
+                console.log('    ✓ Included jszip in bundle');
+            } catch (err) {
+                console.warn('    ⚠ Failed to read jszip from node_modules, skipping vendor prepend');
+            }
+        }
+
+        const combinedSize = Buffer.byteLength(combinedWithVendors, 'utf8');
         
         // Transpile with Babel
         console.log(`    Transpiling with Babel...`);
-        const transpiled = await transpileJs(combined, bundleName);
+        const transpiled = await transpileJs(combinedWithVendors, bundleName);
         const transpiledSize = Buffer.byteLength(transpiled, 'utf8');
         
         // Write non-minified bundle for debugging
@@ -304,6 +333,7 @@ async function build() {
     const startTime = Date.now();
     
     ensureDistDir();
+    copyVendorFiles();
     
     await buildJsBundles();
     buildCssBundles();

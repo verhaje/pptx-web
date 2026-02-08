@@ -23,5 +23,8 @@
     "@babel/core": "^7.28.6",
     "@babel/preset-env": "^7.28.6",
     "terser": "^5.26.0"
+  },
+  "dependencies": {
+    "jszip": "^3.10.1"
   }
 }
